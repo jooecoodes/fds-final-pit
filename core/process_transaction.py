@@ -34,11 +34,20 @@ def process_transaction():
 
     # 2. Process Database Transaction
     conn = get_db()
+
+    # [IMPORTANT] Turn off Python's automatic transaction handling
+    # This allows us to strictly write "BEGIN TRANSACTION" ourselves.
+    conn.isolation_level = None
+
     c = conn.cursor()
     
     # ### RUBRIC: TRANSACTION START
     try:
         print("Attempting Transaction...")
+        
+        # ### RUBRIC: BEGIN TRANSACTION (Explicitly written now!)
+        c.execute("BEGIN TRANSACTION")
+        
         total = 0
         
         # Create Sale Header
@@ -47,7 +56,6 @@ def process_transaction():
 
         # Process Items
         for pid, qty in cart:
-            # Check Price & Stock
             c.execute("SELECT Price, StockQty FROM Products WHERE ProductID = ?", (pid,))
             row = c.fetchone()
             if not row: raise Exception(f"Invalid Product ID: {pid}")
@@ -55,29 +63,25 @@ def process_transaction():
             price, current_stock = row['Price'], row['StockQty']
             
             if current_stock < qty:
-                # This triggers the ROLLBACK
-                raise Exception(f"Not enough stock for Product {pid}! (Have: {current_stock}, Need: {qty})")
+                raise Exception(f"Not enough stock for Product {pid}!")
 
             subtotal = price * qty
             total += subtotal
 
-            # Deduct Stock
             c.execute("UPDATE Products SET StockQty = StockQty - ? WHERE ProductID = ?", (qty, pid))
-            
-            # Add Line Item
             c.execute("INSERT INTO SaleItems (SaleID, ProductID, Quantity, Subtotal) VALUES (?,?,?,?)", 
                       (sale_id, pid, qty, subtotal))
 
         # Update Final Total
         c.execute("UPDATE Sales SET TotalAmount = ? WHERE SaleID = ?", (total, sale_id))
 
-        # ### RUBRIC: COMMIT (Save changes permanently)
-        conn.commit()
+        # ### RUBRIC: COMMIT (Explicitly written!)
+        c.execute("COMMIT")
         print(f"✅ SUCCESS! Total: ₱{total}")
 
     except Exception as e:
-        # ### RUBRIC: ROLLBACK (Undo everything if error)
-        conn.rollback()
+        # ### RUBRIC: ROLLBACK (Explicitly written!)
+        c.execute("ROLLBACK")
         print(f"❌ TRANSACTION FAILED: {e}")
         print("Changes rolled back.")
     
