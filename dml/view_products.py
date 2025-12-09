@@ -1,4 +1,4 @@
-from config import get_db
+from setup.config import get_db
 
 def view_products():
     """Shows SELECT, ORDER BY, and CASE."""

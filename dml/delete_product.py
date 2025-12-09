@@ -1,4 +1,6 @@
-from config import get_db
+import sqlite3
+
+from setup.config import get_db
 
 def delete_product():
     """Shows DELETE (and triggers the TRIGGER if item was sold)."""

@@ -1,4 +1,4 @@
-from config import get_db
+from setup.config import get_db
 
 def update_product_price():
     """Shows UPDATE and WHERE."""
